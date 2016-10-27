@@ -1,0 +1,41 @@
+citHeader("To cite the 'dipps' package in publications use:")
+
+#year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
+#vers <- paste("R package version", meta$Version)
+
+year = "2016"
+vers = "0.1.0.9000"
+
+citEntry(entry="Manual",
+         title = "dipps: Tools for Bruker Peaklist Format MSI Data",
+         author = as.person("Lyron Winderbaum"),
+         year = year,
+         note = vers,
+
+         textVersion =
+         paste("Lyron Winderbaum (",
+               year,
+               "). dipps: Tools for Bruker Peaklist Format MSI Data. ",
+               vers, ".", sep=""))
+
+citEntry(entry = "Article",
+         title = "Feature extraction for proteomics imaging mass spectrometry data",
+         author = personList(as.person("L. J. Winderbaum"),
+                             as.person("I. Koch"),
+                             as.person("O. J. R. Gustafsson"),
+                             as.person("S. Meding"),
+                             as.person("P. Hoffmann")),
+         journal = "The Annals of Applied Statistics",
+         year = "2015",
+         number = "4",
+         pages = "1973--1996",
+         volume = "9",
+         doi = "10.1214/15-AOAS870",
+         publisher = "Institute of Mathematical Statistics",
+         note = "Also available from http://arxiv.org/abs/1410.1630v2",
+         textVersion =
+         paste("Winderbaum, L. J. et al.",
+         "Feature extraction for proteomics imaging mass spectrometry data.",
+         "The Annals of Applied Statistics.",
+         "2015;9(4):1973-1996.",
+         "doi: 10.1214/15-AOAS870."))

@@ -1,0 +1,24 @@
+Package: dipps
+Type: Package
+Title: Tools for Bruker Peaklist Format MSI Data
+Version: 0.1.0.9000
+Author@R: person("Lyron", "Winderbaum",
+    email = "lyron.winderbaum@adelaide.edu.au",
+    role = c("aut", "cre"))
+Author: Lyron Winderbaum
+Maintainer: Lyron Winderbaum <lyron.winderbaum@adelaide.edu.au>
+Description: Basic tools for reading in Bruker peaklist format mass spectrometry
+    imaging (MSI) data, and for performing some simple analyses, such
+    as calculating the Difference In ProPortionS described in
+License: GPL-3 | file LICENSE
+Requires: reshape2,
+    ggplot2,
+    plyr
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat
+URL: http://github.com/Armadilloa16/dipps
+BugReports: http://github.com/Armadilloa16/dipps/issues
+LazyData: TRUE
+RoxygenNote: 5.0.1
