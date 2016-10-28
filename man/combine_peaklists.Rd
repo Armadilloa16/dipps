@@ -4,8 +4,7 @@
 \alias{combine_peaklists}
 \title{Read and Combine Bruker MSI peaklist files.}
 \usage{
-combine_peaklists(i.path, i.name = "peaklists", o.path = file.path(".",
-  "data"), o.name = NA)
+combine_peaklists(i.path, i.name = "peaklists", o.path = ".", o.name = NA)
 }
 \arguments{
 \item{i.path}{Path to dataset of interest. This will usually be a folder with
@@ -27,46 +26,31 @@ On successful completion teturns the number of empty spectra found
 \description{
 Bruker mass spectrometry imaging software produces a folder filled with many
 peaklists --- one for each spectrum. \code{combine_peaklists} reads all such
-peaklist files in a given folder, and writes relevant information to three
-tables that are useful and easier to handle downstream.
-}
-\details{
-\code{combine_peaklists} writes three tables, \itemize{ \item
-\code{Peaklist}: A peaklist consisting of all peaklists concatenated together
-with one additional column, \code{Acq}, identifying the spectrum from which a
-peak originated. \item \code{LXY}: A list of X-Y coordinates, or "LXY". In
-this table rows represent spectra, i.e. seperate peaklist files in the Bruker
-format. This table contains five columns: \itemize{ \item \code{fname}: The
-original peaklist filename. \item \code{R}:     The region numbers of the
-corresponding spectra. \item \code{X}:     The X-coordinates of the
-corresponding spectra. \item \code{Y}:     The Y-coordinates of the
-corresponding spectra. \item \code{Acq}:   An integer identifier used to
-cross-reference to the peaklist table. } \item \code{fExists}: A matrix
-representing a spatial grid identifying spatial X-Y coordinates where spectra
-were acquired, i.e. for which peaklist files exist, or "fExists". If
-\code{x.min} and \code{x.max} are the minimum and maximum X-coordinates at
-which spectra were acquired, then and similarly \code{y.min} and \code{y.max}
-are the minimum and maximum Y-coordinates, then the \code{fExists} matrix
-represents a spatial grid spanning from \code{x.min - 1} to \code{x.max + 1}
-on the X-axis, and from \code{y.min - 1} to \code{y.max + 1} on the Y-axis.
-\code{fExists} contains zero values at spatial locations at which no spectra
-was acquired (no peaklist file exists), and contains the corresponding value
-of \code{Acq} at spatial locations at which spectra were acquired (peaklist
-file exists). \code{fExists} is useful for constructing spatial plots TODO:
-Add a See: here to plotting function. } Note that \code{combine_peaklists}
-checked for duplicate spectra (peaklist files with the same region number,
-X-coordinate, and Y-coordinate) and will throw an error if it finds any. Also
-note that \code{Acq} will correspond to the order of acquisition of the
-spectra if the spectra where acquired in increasing order of first region
-number, second Y-coordinate and third X-coordinate, in that order of
-priority.
+peaklist files in a given folder, and writes relevant information to two
+tables: a peak-list, and a spectrum-list: \itemize{ \item Peak-list: A table
+in which each row corresponds to a peak. Consists of all original peaklists
+concatenated together with one additional column, \code{Acq}, identifying the
+spectrum from which a peak originated. \item Spectrum-list: A table in which
+each row corresponds to a spectrum. Columns contain information relevant at a
+spectrum level, specifically this table contains five columns total:
+\itemize{ \item \code{fname}: The original peaklist filename. \item \code{R}:
+The region numbers of the corresponding spectra. \item \code{X}:     The
+X-coordinates of the corresponding spectra. \item \code{Y}:     The
+Y-coordinates of the corresponding spectra. \item \code{Acq}:   An integer
+identifier used to cross-reference to the peak-list table. } } Note that
+\code{combine_peaklists} checks for duplicate spectra (peaklist files with
+the same region number, X-coordinate, and Y-coordinate) and will throw an
+error if it finds any. Also note that \code{Acq} will correspond to the order
+of acquisition of the spectra if the spectra where acquired in increasing
+order of first region number, second Y-coordinate and third X-coordinate, in
+that order of priority.
 }
 \examples{
 combine_peaklists("A1")
 }
 \seealso{
-\code{\link{load_peaklist}}, \code{\link{load_LXY}}, and
-  \code{\link{load_fExists}} for functions that can then load these resulting
-  files once they have been created.
+\code{\link{load_peaklist}} and \code{\link{load_speclist}} for
+  functions that can then load these resulting files once they have been
+  created.
 }
 

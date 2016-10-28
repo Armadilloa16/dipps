@@ -9,9 +9,15 @@ Author: Lyron Winderbaum
 Maintainer: Lyron Winderbaum <lyron.winderbaum@adelaide.edu.au>
 Description: Basic tools for reading in Bruker peaklist format mass spectrometry
     imaging (MSI) data, and for performing some simple analyses, such
-    as calculating the Difference In ProPortionS described in
+    as calculating the Difference In ProPortionS described in Winderbaum et al.
+    (2015).
 License: GPL-3 | file LICENSE
-Requires: reshape2,
+Imports: utils,
+    stats,
+    plyr,
+    reshape2
+Requires: utils,
+    reshape2,
     ggplot2,
     plyr
 Suggests:

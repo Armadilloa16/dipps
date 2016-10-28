@@ -13,197 +13,155 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#' Subsets a peaklist around known masses.
+#'
+#' Subsets a peaklist around given masses with the given tolerance.
+#'
+#' @param df.peak Parameter
+#' @param mzs Parameter
+#' @param margin Parameter
+#' @param use_ppm Parameter
+#' @param var Parameter
+#'
+#' @export
+extract_masses <- function(df.peak, mzs,
+                           margin = 0.3,
+                           use_ppm = FALSE,
+                           var = "m.z") {
+  # TODO: Check inputs
 
-# This is for taking a subset of a peaklist centered around certain known m/z values,
-# for example calibrants. fixed Da bins (use_ppm = FALSE) or ppm based tolerances
-# (use_ppm = TRUE) are both supported.
-mzMatch <- function(peaklist_in,mzList,binMargin=0.3,use_ppm=FALSE) {
-  peaklist_subset_does_not_exist = TRUE
-  if (use_ppm){
-    binMargin_ppm <- binMargin
-  }
-  for (i in 1:length(mzList)){
-    if (use_ppm){
-      binMargin <- binMargin_ppm*mzList[i]/1000000
-    }
-    idx = which(abs(peaklist_in$m.z - mzList[i])<binMargin)
-    if (length(idx) > 0){
-      if (peaklist_subset_does_not_exist){
-        peaklist_subset <- transform(peaklist_in[idx,],
-                                     PeakGroup=mzList[i])
-        peaklist_subset_does_not_exist = FALSE
-      } else {
-        peaklist_subset <- rbind(peaklist_subset,transform(peaklist_in[idx,],
-                                                           PeakGroup=mzList[i]))
-      }
+  df.sub.dne = FALSE
+  if (use_ppm) margin.ppm = margin
+  for (i in 1:length(mzs)){
+    if (use_ppm) margin = margin.ppm*mzs[i]*1e-6
+    l = abs(df.peak[,var] - mzs[i]) <= margin
+    if (all(!l)) next
+    if (!df.sub.exists){
+      df.sub <- transform(df.peak[l,], group = mzs[i])
+      df.sub.exists = TRUE
+    } else {
+      df.sub <- rbind(df.sub, transform(df.peak[l,], group = mzs[i]))
     }
   }
-  return(peaklist_subset)
+  return(df.sub)
 }
 
 
-# Does a peak-grouping, and annotates peaks by peakgroup, in case you want that.
-# If you set a non-zero minGroupSize here any peaks not allocated to groups will be
-# annotates peakgroup zero. This can always be done later though, with the table function
-# in the localFunctions.R file for example, so I reccomend leaving minGroupSize = 0 here.
-# You could modify tol (the tolerance used) if you wish however.
-groupPeaks <- function(peaklist_in,tol = 0.1, minGroupSize = 0) {
-  peaklist_in <- peaklist_in[order(peaklist_in$m.z),]
-  nPeaks <- nrow(peaklist_in)
-  peaklist_in <- transform(peaklist_in,PeakGroup = 1)
-  for (i in which(peaklist_in[2:nPeaks,]$m.z - peaklist_in[1:(nPeaks-1),]$m.z > tol)){
-    peaklist_in$PeakGroup[(i+1):nPeaks] <- peaklist_in$PeakGroup[(i+1):nPeaks] + 1
+#' Tolerance Clustering
+#'
+#' Groups peaks together according to the equivalence classes induced by the
+#' relation `are within tol of each other in mass'.
+#'
+#' @param df.peak Parameter
+#' @param tol Parameter
+#' @param var Parameter
+#'
+#' @examples
+#' \dontrun{
+#' dataset.name = "A1" # Peaklist files should be in ./A1/peaklists/
+#' n.empty = combine_peaklists(dataset.name)
+#' df.peak = load_peaklist(dataset.name)
+#' df.tol  = tol_clus(df.peak)
+#' # Count how many peaks in each group
+#' counts = table(df.tol$group)
+#' # Remove peaks belonging to groups with less than 100 peaks total.
+#' df.sub = subset(df.tol, group %in% as.numeric(names(counts)[counts >= 100]))
+#' }
+#' @export
+tol_clus <- function(df.peak,
+                     tol = 0.1,
+                     var = "m.z") {
+  # TODO: Check inputs
+
+  df.peak = df.peak[order(df.peak[, var]),]
+  n = nrow(df.peak)
+  df.peak <- transform(df.peak, group = 1)
+  for (i in which(df.peak[2:n, var] - df.peak[1:(n-1), var] > tol)){
+    df.peak[(i+1):n, "group"] <- df.peak[(i+1):n, "group"] + 1
   }
-  for (p in which(as.vector(table(peaklist_in$PeakGroup)) < minGroupSize)){
-    peaklist_in[which(peaklist_in$PeakGroup == p),]$PeakGroup <- 0
-  }
-  return(peaklist_in)
+  return(df.peak)
 }
 
-dbscan_lw <- function(peaklist_in,eps=0.05,mnpts=100,cvar="m.z",pp=TRUE){
-  # Implements DBSCAN* as in section 3 of:
-  #
-  # Campello, Ricardo JGB, Davoud Moulavi, and Joerg Sander.
-  # "Density-based clustering based on hierarchical density estimates."
-  # In Advances in Knowledge Discovery and Data Mining, pp. 160-172.
-  # Springer Berlin Heidelberg, 2013.
-  #
-  # For one-dimensional objects only. Intended for clustering
-  # peaks by m/z location in MALDI Imaging.
-
-  if(sum(cvar==names(peaklist_in))==0){
-    error("Non-existent variable selected for clustering.")
+#' Density Based Clustering
+#'
+#' Groups peaks together according to the equivalence classes induced by the
+#' relation `are within tol of each other in mass'.
+#'
+#' @param df.peak Parameter
+#' @param eps Parameter
+#' @param mnpts Parameter
+#' @param var Parameter
+#' @param pp Parameter
+#'
+#' @seealso This is a univariate optimisation of the DBSCAN* algorithm as in
+#' section 3 of:
+#'
+#' Campello, Ricardo JGB, Davoud Moulavi, and Joerg Sander.
+#' "Density-based clustering based on hierarchical density estimates." In
+#' Advances in Knowledge Discovery and Data Mining, pp. 160-172. Springer Berlin
+#' Heidelberg, 2013.
+#'
+#' @examples
+#' \dontrun{
+#' dataset.name = "A1" # Peaklist files should be in ./A1/peaklists/
+#' n.empty = combine_peaklists(dataset.name)
+#' df.peak = load_peaklist(dataset.name)
+#' df.tol  = dbscan(df.peak)
+#' }
+#' @export
+dbscan <- function(df.peak, eps=0.05, mnpts=100, var="m.z", pp=TRUE){
+  if (!any(var == names(df.peak))){
+    stop("dipps::dbscan: Non-existent variable selected for clustering.")
   }
+  # TODO: Add more checks on input
 
-  n <- nrow(peaklist_in)
+  n <- nrow(df.peak)
   # sort
   if(pp){
     print("Sorting...")
   }
-  peaklist_in <- peaklist_in[order(peaklist_in[,cvar]),]
+  df.peak <- df.peak[order(df.peak[, var]), ]
+
+  x <- df.peak[, var]
+  count <- rep(0,n)
   if(pp){
-    print("Done")
-  }
-  p_locs <- peaklist_in[,cvar]
-  p_core <- rep(0,n)
-  if(pp){
-    print("Counting neighbours")
+    print("Counting Neighbours...")
+    cur.per = 0
   }
   for(i in 1:(mnpts+1)){
-    temp = (p_locs[(1+i):n] - p_locs[1:(n-i)]) <= eps
-    p_core[(1+i):n] = p_core[(1+i):n] + temp
-    p_core[1:(n-i)] = p_core[1:(n-i)] + temp
-    if(pp){
-      print(paste(toString(i-1),"/",toString(mnpts)))
+    tmp = (x[(1+i):n] - x[1:(n-i)]) <= eps
+    count[(1+i):n] = count[(1+i):n] + tmp
+    count[1:(n-i)] = count[1:(n-i)] + tmp
+    if (pp & floor(20 * i / (mnpts + 1)) > cur.per) {
+      cur.per = floor(20 * i / (mnpts + 1))
+      print(paste(toString(5 * cur.per), "%", sep = ""))
     }
   }
   # Identify core points
-  p_core <- p_core >= mnpts
+  p_core <- count >= mnpts
   n_core <- sum(p_core)
   if(n_core == 0){
-    print("No core points")
-    return(FALSE)
+    warning("dipps::dbscan: No core points")
+    return(data.frame())
   }
   # Check there is more than one core point
   if(n_core == 1){
-    peaklist_in$PeakGroup <- as.numeric(p_core)
-    return(peaklist_in)
+    df.peak$group <- as.numeric(p_core)
+    return(df.peak)
   }
   # calc pairwise (adjacent) distances between core points (only)
-  p_locs <- p_locs[p_core]
-  d_pair <- p_locs[2:n_core] - p_locs[1:(n_core-1)]
-  clus <- c(1,1+cumsum(d_pair > eps))
-
-  peaklist_in$PeakGroup = 0
-  peaklist_in[p_core,"PeakGroup"] = clus
-  return(peaklist_in)
-}
-
-
-
-
-
-
-
-
-
-DIPPS <- function(pl_in){
-  # peaklist_all should be a data.frame with at least
-  # three variables:
-  #  - Acquisition (identifying unique spectra)
-  #  - PeakGroup (identifying peakgroups)
-  #  - Group (identifying regions to be compared by
-  #     DIPPS), and should take three values:
-  #      - 1 coding for the `downregulated' group, and
-  #      - 2 coding for the `upregulated group.
-
-  # Commented out -- meaning assume input is unique
-  # Check for multiple peaks and remove.
-  #   pl_in = unique(pl_in)
-
-  nSpec_d = length(unique(subset(pl_in,Group == 1)$Acquisition))
-  nSpec_u = length(unique(subset(pl_in,Group == 2)$Acquisition))
-
-  prop = ddply(pl_in,
-               c("PeakGroup","Group"),
-               summarise,
-               p = length(Acquisition)
-  )
-  prop[prop$Group == 1,"p"] = prop[prop$Group == 1,"p"]/nSpec_d
-  prop[prop$Group == 2,"p"] = prop[prop$Group == 2,"p"]/nSpec_u
-
-  prop <- reshape(prop,
-                  timevar = "Group",
-                  idvar="PeakGroup",
-                  direction="wide")
-  names(prop) = c("PeakGroup","p.d","p.u")
-
-  prop = replace(prop,is.na(prop),0)
-  prop$d = prop$p.u - prop$p.d
-
-  return(prop)
-}
-
-
-
-
-dippsHeur <- function(pl_in,dsum_in){
-  # Takes the output of DIPPS as input, and calculates
-  # a heuristic cutoff for the `optimal' number of
-  # variables with highest DIPPS.
-
-  u.m = dcast(subset(pl_in,Group==2),
-              Acquisition~PeakGroup,
-              value.var="Group")
-  acq = u.m[,1]
-  u.m = as.matrix(u.m[,-1])
-  u.m[!is.na(u.m)] = 1
-  u.m[is.na(u.m)] = 0
-  acq = data.frame(Acquisition = acq,
-                   nPeaks = rowSums(u.m))
-  u.m = u.m/sqrt(acq$nPeaks)
-  c.u = colMeans(u.m)
-  c.u = c.u/norm(c.u,"2")
-
-  temp = match(colnames(u.m),dsum_in$PeakGroup)
-  dsum_in$c.u = 0
-  dsum_in[temp,"c.u"] = c.u
-
-  # Find data-driven cutoff according to the DIPPS method using cosine distance.
-  curMinCosD = 10
-  sortedDIPPS = sort(dsum_in$d,index.return=TRUE)
-  # vN = 1:floor(nrow(Summary_merged)/2)
-  vN = 1:nrow(dsum_in)
-  cosD = vN
-  for (n in vN){
-    dsum_in$t = 0
-    dsum_in[tail(sortedDIPPS$ix,n),]$t = 1/sqrt(n)
-    cosD[n] = 1 - sum(dsum_in$t * dsum_in$c.u)
+  if (pp) {
+    print("Grouping core points...")
   }
-  nStar = vN[which.min(cosD)]
+  x_core <- x[p_core]
+  dist <- x_core[2:n_core] - x_core[1:(n_core-1)]
+  clus <- c(1, 1 + cumsum(x_core > eps))
 
-  return(nStar)
+  df.peak$group = 0
+  df.peak[p_core, "group"] = clus
+  return(df.peak)
 }
+
 
 
 

@@ -19,67 +19,46 @@
 #'
 #' @inheritParams combine_peaklists
 #' @seealso \code{\link{combine_peaklists}}
-load_peaklist <- function(o.name , o.path = file.path(".","data")){
-  peaklist_all <- read.table(file.path(o.path,
-                                       paste(o.name, "_peaklist.txt",sep="")),
-                             sep = "\t", header = TRUE,
-                             stringsAsFactors = FALSE)
-  return(peaklist_all)
+#' @export
+load_peaklist <- function(o.name , o.path = "."){
+  utils::read.table(file.path(o.path, paste(o.name, "_peaklist.txt",sep="")),
+                    sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 }
 
 #' @describeIn load_peaklist Read LXY file.
-load_LXY <- function(o.name , o.path = file.path(".","data")){
-  LXY <- read.table(file.path(o.path,
-                              paste(o.name, "_LXY.txt",sep="")),
+#' @export
+load_speclist <- function(o.name , o.path = "."){
+  utils::read.table(file.path(o.path, paste(o.name, "_speclist.txt",sep="")),
                     sep = "\t", header = TRUE, stringsAsFactors = FALSE)
-  return(LXY)
 }
 
-#' @describeIn load_peaklist Read fExists file.
-load_fExists <- function(o.name , o.path = file.path(".","data")){
-  fExists <- read.table(file.path(o.path,
-                                  paste(o.name, "_fExists.txt",sep="")),
-                        sep = "\t", header = FALSE)
-  return(fExists)
+extract_capture <- function(x, rex, cap){
+  as.numeric(substring(x, attr(rex,"capture.start")[,cap], {
+    attr(rex,"capture.start")[,cap] + attr(rex,"capture.length")[,cap] - 1}))
 }
-
 
 #' Read and Combine Bruker MSI peaklist files.
 #'
 #' Bruker mass spectrometry imaging software produces a folder filled with many
 #' peaklists --- one for each spectrum. \code{combine_peaklists} reads all such
-#' peaklist files in a given folder, and writes relevant information to three
-#' tables that are useful and easier to handle downstream.
-#'
-#' \code{combine_peaklists} writes three tables, \itemize{ \item
-#' \code{Peaklist}: A peaklist consisting of all peaklists concatenated together
-#' with one additional column, \code{Acq}, identifying the spectrum from which a
-#' peak originated. \item \code{LXY}: A list of X-Y coordinates, or "LXY". In
-#' this table rows represent spectra, i.e. seperate peaklist files in the Bruker
-#' format. This table contains five columns: \itemize{ \item \code{fname}: The
-#' original peaklist filename. \item \code{R}:     The region numbers of the
-#' corresponding spectra. \item \code{X}:     The X-coordinates of the
-#' corresponding spectra. \item \code{Y}:     The Y-coordinates of the
-#' corresponding spectra. \item \code{Acq}:   An integer identifier used to
-#' cross-reference to the peaklist table. } \item \code{fExists}: A matrix
-#' representing a spatial grid identifying spatial X-Y coordinates where spectra
-#' were acquired, i.e. for which peaklist files exist, or "fExists". If
-#' \code{x.min} and \code{x.max} are the minimum and maximum X-coordinates at
-#' which spectra were acquired, then and similarly \code{y.min} and \code{y.max}
-#' are the minimum and maximum Y-coordinates, then the \code{fExists} matrix
-#' represents a spatial grid spanning from \code{x.min - 1} to \code{x.max + 1}
-#' on the X-axis, and from \code{y.min - 1} to \code{y.max + 1} on the Y-axis.
-#' \code{fExists} contains zero values at spatial locations at which no spectra
-#' was acquired (no peaklist file exists), and contains the corresponding value
-#' of \code{Acq} at spatial locations at which spectra were acquired (peaklist
-#' file exists). \code{fExists} is useful for constructing spatial plots TODO:
-#' Add a See: here to plotting function. } Note that \code{combine_peaklists}
-#' checked for duplicate spectra (peaklist files with the same region number,
-#' X-coordinate, and Y-coordinate) and will throw an error if it finds any. Also
-#' note that \code{Acq} will correspond to the order of acquisition of the
-#' spectra if the spectra where acquired in increasing order of first region
-#' number, second Y-coordinate and third X-coordinate, in that order of
-#' priority.
+#' peaklist files in a given folder, and writes relevant information to two
+#' tables: a peak-list, and a spectrum-list: \itemize{ \item Peak-list: A table
+#' in which each row corresponds to a peak. Consists of all original peaklists
+#' concatenated together with one additional column, \code{Acq}, identifying the
+#' spectrum from which a peak originated. \item Spectrum-list: A table in which
+#' each row corresponds to a spectrum. Columns contain information relevant at a
+#' spectrum level, specifically this table contains five columns total:
+#' \itemize{ \item \code{fname}: The original peaklist filename. \item \code{R}:
+#' The region numbers of the corresponding spectra. \item \code{X}:     The
+#' X-coordinates of the corresponding spectra. \item \code{Y}:     The
+#' Y-coordinates of the corresponding spectra. \item \code{Acq}:   An integer
+#' identifier used to cross-reference to the peak-list table. } } Note that
+#' \code{combine_peaklists} checks for duplicate spectra (peaklist files with
+#' the same region number, X-coordinate, and Y-coordinate) and will throw an
+#' error if it finds any. Also note that \code{Acq} will correspond to the order
+#' of acquisition of the spectra if the spectra where acquired in increasing
+#' order of first region number, second Y-coordinate and third X-coordinate, in
+#' that order of priority.
 #'
 #' @param i.path Path to dataset of interest. This will usually be a folder with
 #'   a subfolder (\code{i.name}) that contains the peaklist files themselves.
@@ -91,15 +70,15 @@ load_fExists <- function(o.name , o.path = file.path(".","data")){
 #' @return On successful completion teturns the number of empty spectra found
 #'   --- peaklist files with a header but no peaks. If no peaklist files are
 #'   found at all returns -1 and a warning.
-#' @seealso \code{\link{load_peaklist}}, \code{\link{load_LXY}}, and
-#'   \code{\link{load_fExists}} for functions that can then load these resulting
-#'   files once they have been created.
+#' @seealso \code{\link{load_peaklist}} and \code{\link{load_speclist}} for
+#'   functions that can then load these resulting files once they have been
+#'   created.
 #' @examples
 #' combine_peaklists("A1")
 #' @export
 combine_peaklists <- function(i.path,
                            i.name = "peaklists",
-                           o.path = file.path(".","data"),
+                           o.path = ".",
                            o.name = NA){
 
   ###################################################
@@ -112,82 +91,48 @@ combine_peaklists <- function(i.path,
   # Matches files to the regular expression for peaklist files.
   pl.fnames = list.files(path = pl.path, "R\\d{2,3}X\\d{3,4}Y\\d{3,4}.txt")
   if (length(pl.fnames) == 0){
-    warning("dipps::read_peaklists: No peaklist files found, aborting.")
+    warning("dipps::combine_peaklists: No peaklist files found, aborting.")
     return(-1)
   }
 
-  #############################
-  # Generates fExists and LXY #
-  #############################
   # Extracts the Region numbers and X,Y coordinates for all the spectra.
-  extr_cap <- function(x, rex, cap){
-    as.numeric(substring(x, attr(rex,"capture.start")[,cap], {
-      attr(rex,"capture.start")[,cap] + attr(rex,"capture.length")[,cap] - 1}))
-  }
   rex = regexpr("R(?P<r>\\d{2,3})X(?P<x>\\d{3,4})Y(?P<y>\\d{3,4})",
                 pl.fnames, perl = TRUE)
-  LXY <- data.frame(
-    fname = pl.fnames,
-    R     = extr_cap(x, rex, "r"),
-    X     = extr_cap(x, rex, "x"),
-    Y     = extr_cap(x, rex, "y"),
-    Acq   = rep(0,length(pl.fnames))
-  )
-  x.min <- min(LXY$X)
-  y.min <- min(LXY$Y)
-  X <- x.min:max(LXY$X)
-  Y <- y.min:max(LXY$Y)
-  fExists <- matrix(rep(0,(length(X)+2)*(length(Y)+2)),nrow=length(X)+2)
-  count <- 0
-  for (r in sort(unique(LXY$R))){
-    for (y in sort(unique(LXY[LXY$R==r,]$Y))){
-      for (x in sort(unique(LXY[LXY$R==r & LXY$Y==y,]$X))){
-        if (sum(LXY$R==r & LXY$Y==y & LXY$X==x) > 1){
-          stop(paste("dipps::read_peaklists: Duplicate peaklist R=",
-                     toString(r), ", X=", toString(x), ", Y=", toString(y),
-                     sep=""))
-        }
-        count <- count + 1
-        fExists[x-x.min+2,y-y.min+2] <- count
-        LXY[LXY$R==r & LXY$Y==y & LXY$X==x,]$Acq = count
-      }
-    }
-  }
-  write.table(fExists,
-              file = file.path(o.path, paste(o.name, "_fExists.txt", sep="")),
-              sep = "\t", row.names = FALSE, col.names = FALSE)
-  write.table(LXY,
-              file = file.path(o.path, paste(o.name, "_LXY.txt", sep="")),
-              sep = "\t", row.names = FALSE, col.names = TRUE)
+  df.spec <- data.frame(fname = pl.fnames,
+                        R     = extract_capture(pl.fnames, rex, "r"),
+                        X     = extract_capture(pl.fnames, rex, "x"),
+                        Y     = extract_capture(pl.fnames, rex, "y"))
+  df.spec = df.spec[order(df.spec$R, df.spec$Y, df.spec$X),]
+  df.spec$Acq = 1:nrow(df.spec)
+  utils::write.table(df.spec,
+                     file = file.path(o.path, paste(o.name, "_speclist.txt", sep="")),
+                     sep = "\t", row.names = FALSE, col.names = TRUE)
 
-  ################################################################
-  # Read the peaklist files and compile a comprehensive peaklist #
-  ################################################################
   pl_not_empty = logical(length=length(pl.fnames))
   header_not_written = TRUE
 
   # File to write output
-  o.file = file(file.path(o.path, paste(p.name, "_peaklist.txt", sep="")), "w")
+  o.file = file(file.path(o.path, paste(o.name, "_peaklist.txt", sep="")), "w")
 
   # For each peaklist file
   for (spec_idx in 1:length(pl.fnames)){
     fname <- pl.fnames[spec_idx]
 
     # Read the peaklist file
-    pl.cur <- read.table(file.path(pl.path, fname), header=TRUE)
+    pl.cur <- utils::read.table(file.path(pl.path, fname), header=TRUE)
     # Check that it is not empty (no peaks)
-    if (nrow(pl.cur) > 0){
-      # It's not empty!
-      pl_not_empty[spec_idx] <- TRUE
-      # Annotate peaks with the Acq of their parent peaklist.
-      pl.cur <- transform(pl.cur, Acq = LXY[LXY$fname == fname,]$Acq)
-      # Write peaklist
-      if (header_not_written) {
-        write.table(pl.cur, o.file, sep="\t", row.names=FALSE)
-        header_not_written = FALSE
-      } else {
-        write.table(pl.cur, o.file, sep="\t", row.names=FALSE, col.names=FALSE)
-      }
+    if (nrow(pl.cur) == 0) next
+    # It's not empty!
+    pl_not_empty[spec_idx] <- TRUE
+    # Annotate peaks with the Acq of their parent peaklist.
+    pl.cur <- transform(pl.cur, Acq = df.spec[df.spec$fname == fname,]$Acq)
+    # Write peaklist
+    if (header_not_written) {
+      utils::write.table(pl.cur, o.file, sep="\t", row.names=FALSE)
+      header_not_written = FALSE
+    } else {
+      utils::write.table(pl.cur, o.file, sep="\t",
+                         row.names=FALSE, col.names=FALSE)
     }
   }
   close(o.file)
