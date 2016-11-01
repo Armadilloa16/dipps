@@ -19,6 +19,10 @@
 #' @param df.spec Parameter
 #' @param plot.var Parameter
 #' @param id.var Parameter
+#' @param x.var Parameter
+#' @param y.var Parameter
+#' @param return.plot Parameter
+#' @param print.plot Parameter
 #'
 #' @examples
 #' \dontrun{
@@ -35,20 +39,16 @@
 #' df.cal$log.intensity = log1p(df.cal$intensity)
 #' # Plot log-intensity of said m/z window.
 #' df.plot = spatial_plot(df.cal, df.spec, plot.var = "log.intensity")
-#' p = (ggplot(df.plot, aes(X, Y))
-#'      + geom_tile(aes(fill=log.intensity,
-#'                      alpha=as.numeric(!is.na(log.intensity))),
-#'                  colour=NA)
-#'      + geom_tile(data = df.plot, alpha=0.5*as.numeric(df.plot$empty))
-#'      + coord_fixed()
-#'      + guides(alpha = FALSE))
-#' print(p)
 #' }
 #' @export
 spatial_plot <- function(df.peak,
                          df.spec,
                          plot.var = "intensity",
-                         id.var = "Acq"){
+                         id.var = "Acq",
+                         x.var = "X",
+                         y.var = "Y",
+                         return.plot = FALSE,
+                         print.plot = TRUE){
   # TODO: Add checks on input.
 
   # Check for multiple peaks per acq
@@ -58,13 +58,13 @@ spatial_plot <- function(df.peak,
                id.var, ": ", toString(names(tmp[tmp>1])), sep = ""))
   }
 
-  x.min = min(df.spec$X)
-  x.max = max(df.spec$X)
-  y.min = min(df.spec$Y)
-  y.max = max(df.spec$Y)
+  x.min = min(df.spec[, x.var])
+  x.max = max(df.spec[, x.var])
+  y.min = min(df.spec[, y.var])
+  y.max = max(df.spec[, y.var])
 
-  df.plot = merge(df.spec[, c("X", "Y", id.var)],
-                  df.peak[, c(plot.var, id.var)],
+  df.plot = merge(df.spec[, c(x.var, y.var, id.var)],
+                  df.peak[, c(plot.var,     id.var)],
                   all.x = TRUE)
   df.plot$empty = is.na(df.plot[, plot.var])
   df.plot[, id.var] = NULL
@@ -77,7 +77,29 @@ spatial_plot <- function(df.peak,
                   df.plot, all.x = TRUE)
   df.plot[is.na(df.plot$empty), "empty"] = FALSE
 
-  return(df.plot)
+  if (return.plot | print.plot) {
+    p = (ggplot2::ggplot(df.plot, ggplot2::aes(df.plot[, x.var],
+                                               df.plot[, y.var]))
+         + ggplot2::geom_tile(ggplot2::aes(fill = eval(as.symbol(plot.var)),
+             alpha = as.numeric(!is.na(eval(as.symbol(plot.var))))),
+                              colour = NA)
+         + ggplot2::geom_tile(data = df.plot,
+                              alpha = 0.5*as.numeric(df.plot$empty))
+         + ggplot2::coord_fixed()
+         + ggplot2::guides(alpha = FALSE,
+                           fill = ggplot2::guide_colourbar(plot.var))
+         + ggplot2::xlab(x.var)
+         + ggplot2::ylab(y.var))
+  }
+  if (print.plot) {
+    print(p)
+  }
+
+  if (return.plot){
+    return(p)
+  } else {
+    return(df.plot)
+  }
 }
 
 

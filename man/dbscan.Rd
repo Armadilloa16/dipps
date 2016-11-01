@@ -4,7 +4,7 @@
 \alias{dbscan}
 \title{Density Based Clustering}
 \usage{
-dbscan(df.peak, eps = 0.05, mnpts = 100, var = "m.z", pp = TRUE)
+dbscan(df.peak, eps = 0.05, mnpts = 100, var = "m.z", pp = FALSE)
 }
 \arguments{
 \item{df.peak}{Parameter}

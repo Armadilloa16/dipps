@@ -15,11 +15,8 @@ License: GPL-3 | file LICENSE
 Imports: utils,
     stats,
     plyr,
-    reshape2
-Requires: utils,
     reshape2,
-    ggplot2,
-    plyr
+    ggplot2
 Suggests:
     knitr,
     rmarkdown,
@@ -28,3 +25,4 @@ URL: http://github.com/Armadilloa16/dipps
 BugReports: http://github.com/Armadilloa16/dipps/issues
 LazyData: TRUE
 RoxygenNote: 5.0.1
+VignetteBuilder: knitr

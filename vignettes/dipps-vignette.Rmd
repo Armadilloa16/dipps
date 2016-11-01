@@ -1,0 +1,16 @@
+---
+title: "DIPPS"
+author: "Lyron Winderbaum"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{DIPPS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+It seemed appropriate to use a full dataset as a worked example in order to 
+write a vignette, but including a full MSI dataset in the `dipps` package seems
+inappropriate, as it would be large and would cause installing the package to be
+slow. As such I have written a vignette seperately, which can be accessed at 
+https://github.com/Armadilloa16/dipps-vignette.

@@ -10,8 +10,8 @@ load_peaklist(o.name, o.path = ".")
 load_speclist(o.name, o.path = ".")
 }
 \arguments{
-\item{o.name}{Name identifying the dataset of interest, will default to the
-data folder name provided in \code{i.path}.}
+\item{o.name}{Name identifying the dataset of interest. If left as \code{NA},
+this will default to name of the data folder provided in \code{i.path}.}
 
 \item{o.path}{Path to where output files should be written.}
 }

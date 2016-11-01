@@ -109,9 +109,14 @@ tol_clus <- function(df.peak,
 #' df.tol  = dbscan(df.peak)
 #' }
 #' @export
-dbscan <- function(df.peak, eps=0.05, mnpts=100, var="m.z", pp=TRUE){
+dbscan <- function(df.peak, eps = 0.05, mnpts = 100, var = "m.z", pp = FALSE){
   if (!any(var == names(df.peak))){
     stop("dipps::dbscan: Non-existent variable selected for clustering.")
+  }
+  if (mnpts > nrow(df.peak)){
+    warning("dipps::dbscan: No core points.")
+    df.peak$group = 0
+    return(df.peak)
   }
   # TODO: Add more checks on input
 
@@ -120,29 +125,36 @@ dbscan <- function(df.peak, eps=0.05, mnpts=100, var="m.z", pp=TRUE){
   if(pp){
     print("Sorting...")
   }
-  df.peak <- df.peak[order(df.peak[, var]), ]
 
-  x <- df.peak[, var]
-  count <- rep(0,n)
+  # TODO: Fix this up with checks of inputs
+  if (is.data.frame(df.peak) & dim(df.peak)[2] > 1) {
+    df.peak <- df.peak[order(df.peak[, var]), ]
+    x <- df.peak[, var]
+  } else if (is.data.frame(df.peak) & dim(df.peak)[2] == 1) {
+    df.peak[var] <- df.peak[order(df.peak[var]), ]
+    x <- df.peak[, var]
+  }
+  d <- rep(1,n)
+  cur.per = 0
   if(pp){
     print("Counting Neighbours...")
-    cur.per = 0
   }
-  for(i in 1:(mnpts+1)){
+  for(i in 1:(mnpts-1)){
     tmp = (x[(1+i):n] - x[1:(n-i)]) <= eps
-    count[(1+i):n] = count[(1+i):n] + tmp
-    count[1:(n-i)] = count[1:(n-i)] + tmp
+    d[(1+i):n] = d[(1+i):n] + tmp
+    d[1:(n-i)] = d[1:(n-i)] + tmp
     if (pp & floor(20 * i / (mnpts + 1)) > cur.per) {
       cur.per = floor(20 * i / (mnpts + 1))
       print(paste(toString(5 * cur.per), "%", sep = ""))
     }
   }
   # Identify core points
-  p_core <- count >= mnpts
+  p_core <- d >= mnpts
   n_core <- sum(p_core)
   if(n_core == 0){
-    warning("dipps::dbscan: No core points")
-    return(data.frame())
+    warning("dipps::dbscan: No core points.")
+    df.peak$group = 0
+    return(df.peak)
   }
   # Check there is more than one core point
   if(n_core == 1){
@@ -155,7 +167,7 @@ dbscan <- function(df.peak, eps=0.05, mnpts=100, var="m.z", pp=TRUE){
   }
   x_core <- x[p_core]
   dist <- x_core[2:n_core] - x_core[1:(n_core-1)]
-  clus <- c(1, 1 + cumsum(x_core > eps))
+  clus <- c(1, 1 + cumsum(dist > eps))
 
   df.peak$group = 0
   df.peak[p_core, "group"] = clus

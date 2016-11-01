@@ -1,0 +1,4 @@
+m/z	SN	QualityFactor	Resolution	intensity	area
+
+
+

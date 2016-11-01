@@ -4,7 +4,8 @@
 \alias{spatial_plot}
 \title{Generate a \code{data.frame} for plotting with \code{ggplot2}}
 \usage{
-spatial_plot(df.peak, df.spec, plot.var = "intensity", id.var = "Acq")
+spatial_plot(df.peak, df.spec, plot.var = "intensity", id.var = "Acq",
+  x.var = "X", y.var = "Y", return.plot = FALSE, print.plot = TRUE)
 }
 \arguments{
 \item{df.peak}{Parameter}
@@ -14,6 +15,14 @@ spatial_plot(df.peak, df.spec, plot.var = "intensity", id.var = "Acq")
 \item{plot.var}{Parameter}
 
 \item{id.var}{Parameter}
+
+\item{x.var}{Parameter}
+
+\item{y.var}{Parameter}
+
+\item{return.plot}{Parameter}
+
+\item{print.plot}{Parameter}
 }
 \description{
 Generate a \code{data.frame} for plotting with \code{ggplot2}
@@ -33,14 +42,6 @@ if (sum(table(df.cal$Acq) > 1) > 0){
 df.cal$log.intensity = log1p(df.cal$intensity)
 # Plot log-intensity of said m/z window.
 df.plot = spatial_plot(df.cal, df.spec, plot.var = "log.intensity")
-p = (ggplot(df.plot, aes(X, Y))
-     + geom_tile(aes(fill=log.intensity,
-                     alpha=as.numeric(!is.na(log.intensity))),
-                 colour=NA)
-     + geom_tile(data = df.plot, alpha=0.5*as.numeric(df.plot$empty))
-     + coord_fixed()
-     + guides(alpha = FALSE))
-print(p)
 }
 }
 
