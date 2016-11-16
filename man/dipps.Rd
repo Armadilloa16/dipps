@@ -2,28 +2,87 @@
 % Please edit documentation in R/dipps.R
 \name{dipps}
 \alias{dipps}
-\title{Difference in ProPortions Statistic (DIPPS)}
+\title{Difference in ProPortions Statistics (DIPPS)}
 \usage{
-dipps(df.peak, id.var = "Acq", group.var = "group", subset.var = "subset")
+dipps(obs, var, subset)
 }
 \arguments{
-\item{df.peak}{Parameter}
+\item{obs}{A vector identifying the observation from which an occurrence
+originated.}
 
-\item{id.var}{Integer variable in \code{df.peak} that identifies unique
-spectra.}
+\item{var}{A vector identifying the variable of which an occurrence is a
+realisation.}
 
-\item{group.var}{Integer variable in \code{df.peak} that identifies peaks
-assigned to the same `peakgroup' -- typically grouped by m.z clustering.}
-
-\item{subset.var}{Boolean variable in \code{df.peak} in which values of
-TRUE identify the subset of spectra expected to be `upregulated'.}
+\item{subset}{A vector identifying occurrences belonging to the subset of
+observations of interest.}
+}
+\value{
+Successful completion will return a data.frame in which rows
+represent variables (as identified by \code{var}), ordered in decreasing
+order of DIPPS, and with seven columns:
+\itemize{
+  \item \code{var}.
+  \item p.u: proportions of occurrence in the \code{subset == TRUE} subset of
+    observations.
+  \item p.d: proportions of occurrence in the \code{subset == FALSE} subset
+    of observations.
+  \item d:   p.u - p.d (DIPPS).
+  \item c.u: the cosine distance centroid of the \code{subset == TRUE} subset
+    of observations.
+  \item cos: the cosine distance between c.u and the `template' vector t
+    which contains ones in each peakgroup with a DIPPS equal to or greater
+    than the DIPPS of the peakgroup the corresponding row represents.
+  \item t:   the `template' vector for the heuristically chosen `optimal'
+    DIPPS cutoff -- i.e. selecting a number of the highest DIPPS variables
+    such that the cosine distance as described above is minimised, under the
+    contraint that the dipps cutoff should be positive.
+}
 }
 \description{
-Calculates the DIPPS for the given subset.
+Calculates the DIPPS for the given subset. The argument descriptions are
+generic as DIPPS can be applied to any binary (``occurrence'') data in which
+each variable has two values (``occurrence'' and ``absence''). In the MSI
+context, an occurrence is generally taken to be a peak, an observation is
+generally taken to be a spectrum and a variable is generally taken to be
+a mass range or peakgroup, possibly grouped via some clustering method such
+as that offered by \code{dbscan}.
+}
+\details{
+\code{obs}, \code{var}, and \code{subset} must be equal length, and can be
+taken from the output of \code{combine_peaklists} with relative ease -- see
+example below. It is also assumed that equal entries in \code{obs} should
+have equal entries in \code{subset} as well. TODO: I should add a check for
+that.
+
+Note that from the perspective of treating occurrence in each variable
+(seperately) being used as a binary classifier for membership in the subset,
+the DIPPS can be thought of as the Informedness of these classifiers, i.e.
+the DIPPS = sensitivity + specificity - 1.
+}
+\examples{
+i.path = system.file("extdata", "test1", package = "dipps")
+n.empty = combine_peaklists(i.path)
+o.name = basename(i.path)
+df.spec = load_speclist(o.name)
+df.peak = load_peaklist(o.name)
+
+# Construct peakgroups
+df.peak$group = dbscan(df.peak$m.z, eps = 0.1, mnpts = 1)
+
+# Select a subset of spectra expected to be overexpressed. In this case
+# spectra with Y-coordinate greater than or equal to 170.
+df.spec$subset = df.spec$Y >= 170
+df.peak = merge(df.peak, df.spec[, c("Acq", "subset")])
+
+# Calculate DIPPS
+df.dipps = dipps(df.peak$Acq, df.peak$group, df.peak$subset)
+
 }
 \seealso{
+\code{\link{combine_peaklists}}, \code{\link{dbscan}},
+
 Winderbaum, L. J. et al. Feature extraction for proteomics imaging
-  mass spectrometry data. The Annals of Applied Statistics.
-  2015;9(4):1973-1996. doi: 10.1214/15-AOAS870.")
+mass spectrometry data. The Annals of Applied Statistics.
+2015;9(4):1973-1996. doi: 10.1214/15-AOAS870.
 }
 

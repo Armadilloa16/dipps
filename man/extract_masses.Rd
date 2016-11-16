@@ -2,22 +2,30 @@
 % Please edit documentation in R/processing.R
 \name{extract_masses}
 \alias{extract_masses}
-\title{Subsets a peaklist around known masses.}
+\title{Extract known masses from a peak-list.}
 \usage{
-extract_masses(df.peak, mzs, margin = 0.3, use_ppm = FALSE, var = "m.z")
+extract_masses(df.peak, masses, margin = 0.3, use_ppm = FALSE,
+  var = "m.z")
 }
 \arguments{
-\item{df.peak}{Parameter}
+\item{df.peak}{A data.frame with column named \code{var}.}
 
-\item{mzs}{Parameter}
+\item{masses}{A numeric vector of masses to extract.}
 
-\item{margin}{Parameter}
+\item{margin}{A positive number: the tolerance around \code{masses} to
+extract.}
 
-\item{use_ppm}{Parameter}
+\item{use_ppm}{A logical value indicating if \code{margin} is given in ppm,
+if not \code{margin} is assumed to be in the same units as \code{var}.}
 
-\item{var}{Parameter}
+\item{var}{A character string representing the variable/ column in
+\code{df.peak} that contain the values to be subsetted.}
 }
 \description{
-Subsets a peaklist around given masses with the given tolerance.
+Typically used on a peak-list as produced by \code{combine_peaklists} to
+extract peaks within a given tolerance of a set of known masses.
+}
+\seealso{
+\code{\link{combine_peaklists}}
 }
 

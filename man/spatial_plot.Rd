@@ -2,46 +2,103 @@
 % Please edit documentation in R/plot.R
 \name{spatial_plot}
 \alias{spatial_plot}
-\title{Generate a \code{data.frame} for plotting with \code{ggplot2}}
+\title{Spatially Plot MSI Data}
 \usage{
 spatial_plot(df.peak, df.spec, plot.var = "intensity", id.var = "Acq",
   x.var = "X", y.var = "Y", return.plot = FALSE, print.plot = TRUE)
 }
 \arguments{
-\item{df.peak}{Parameter}
+\item{df.peak}{A Peak-list data.frame as produced by
+\code{combine_peaklists}, or more commonly a subset thereof.}
 
-\item{df.spec}{Parameter}
+\item{df.spec}{A Spectra-list data.frame as produced by
+\code{combine_peaklists}.}
 
-\item{plot.var}{Parameter}
+\item{plot.var}{A string matching the variable name in \code{df.peak} to
+be plotted.}
 
-\item{id.var}{Parameter}
+\item{id.var}{A string matching the variable name that uniquely
+identifies spectra in both \code{df.peak} and \code{df.spec}, thereby
+linking that information between them.}
 
-\item{x.var}{Parameter}
+\item{x.var}{A string matching the variable name in \code{df.spec} that
+contains the X-coordinates of the spectra.}
 
-\item{y.var}{Parameter}
+\item{y.var}{A string matching the variable name in \code{df.spec} that
+contains the Y-coordinates of the spectra.}
 
-\item{return.plot}{Parameter}
+\item{return.plot}{A logical value that if TRUE will cause
+\code{spatial_plot} to return a ggplot object and if FALSE will instead
+return the data.frame underlying it.}
 
-\item{print.plot}{Parameter}
+\item{print.plot}{A logical value indicating whether the plot should be
+printed to the current graphics device.}
+}
+\value{
+On successful completion returns either a ggplot object or the
+data.frame used to produce said ggplot object, depending on the value of
+\code{return.plot}.
+
+If \code{return.plot} is FALSE, the returned data.frame will contain rows
+that represent unique X-Y coordinate pairs in a rectanglular region extending
+from the minimum X-coordinate in \code{df.spec} minus one to the maximum plus
+one (inclusive), and similarly from the minimum Y-coordinate in
+\code{df.spec} minus one to the maximum plus one (inclusive), and for each
+such unique X-Y coordinate pair four columns represent the relevant plotting
+information:
+\itemize{
+  \item x.var: Columned named with the string \code{x.var}, containing the
+    relevant X-coordinate values.
+  \item y.var: Columned named with the string \code{y.var}, containing the
+    relevant Y-coordinate values.
+  \item plot.var: Column named with the string \code{plot.var}, containing
+    the relevant values, including NA for missing values.
+  \item empty: A logical column indicating X-Y coordinate pairs from which
+    spectra were acquired, but no peaks are present in \code{df.peak}. This
+    is used to distinguish such X-Y coordnate pairs from those in which no
+    spectrum was acquired at all.
+  }
+
+If \code{return.plot} is TRUE, the returned ggplot object is a geom_tile plot
+with axes labelled with \code{x.var} and \code{y.var} respectively, a legend
+for \code{plot.var}, X-Y coordinate pairs (or pixels) for which no spectrum
+was acquired blank, and X-Y coordinate pairs (or pixels) for which a spectrum
+was acquired but no peaks are present in \code{df.peak} in darkened grey. The
+plot uses coord_fixed() to match X and Y scales.
 }
 \description{
-Generate a \code{data.frame} for plotting with \code{ggplot2}
+Produces a spatial plot of the given MSI data, designed to be used with
+combine_peaklists and associated load_* functions. Usually would be used on a
+subset of the Peak-list produced by combine_peaklist, those near a particular
+mass for example, see example below for an example of this example.
+}
+\details{
+Note \code{spatial_plot} assumes that there are no occurrences of multiple
+peaks from the same spectrum in the input peak-list \code{df.peak}. Any such
+occurrences should be dealt with before calling spatial_plot, as otherwise it
+will throw an error.
 }
 \examples{
-\dontrun{
-dataset.name = "A1"
-combine_peaklists(dataset.name)
-df.spec = load_speclist(dataset.name)
-df.peak = load_peaklist(dataset.name)
-# Select a m/z window of interest.
+i.path = system.file("extdata", "test1", package = "dipps")
+n.empty = combine_peaklists(i.path)
+o.name = basename(i.path)
+df.spec = load_speclist(o.name)
+df.peak = load_peaklist(o.name)
+
+# Select a m/z window of interest, in this case m/z = 1570.677 +/- 0.1 Da
 df.cal = subset(df.peak, abs(m.z - 1570.677) < 0.1)
-if (sum(table(df.cal$Acq) > 1) > 0){
-  stop(paste("multiple peaks from the same spectrum in given window.",
-             "This should be dealt with before proceeding."))
-}
-df.cal$log.intensity = log1p(df.cal$intensity)
+
 # Plot log-intensity of said m/z window.
-df.plot = spatial_plot(df.cal, df.spec, plot.var = "log.intensity")
+df.cal$log.intensity = log1p(df.cal$intensity)
+p = spatial_plot(df.cal, df.spec, plot.var = "log.intensity")
+
 }
+\seealso{
+Intended to be used with \code{\link{combine_peaklists}}, associated
+  \code{load_*} functions, and the \code{ggplot2} package
+  (\url{https://cran.r-project.org/web/packages/ggplot2/index.html}),
+  hadley's book on ggplot2 is a good resource, see his github
+  (\url{https://github.com/hadley/ggplot2-book}) or you can access samples
+  and/ or buy his book from the website (\url{http://ggplot2.org/book}).
 }
 

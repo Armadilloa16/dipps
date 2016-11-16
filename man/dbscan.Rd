@@ -4,35 +4,44 @@
 \alias{dbscan}
 \title{Density Based Clustering}
 \usage{
-dbscan(df.peak, eps = 0.05, mnpts = 100, var = "m.z", pp = FALSE)
+dbscan(x, eps = 0.05, mnpts = 100, pp = FALSE)
 }
 \arguments{
-\item{df.peak}{Parameter}
+\item{x}{A numeric vector of values to be clustered}
 
-\item{eps}{Parameter}
+\item{eps}{A positive number representing the window radius in which to
+group points / measure density.}
 
-\item{mnpts}{Parameter}
+\item{mnpts}{A positive number representing the minimum density for a point
+to be included -- the minimum number of points within +/- \code{eps}.}
 
-\item{var}{Parameter}
-
-\item{pp}{Parameter}
+\item{pp}{A logical value indicating whether progress should be printed to
+the console.}
 }
 \description{
-Groups peaks together according to the equivalence classes induced by the
-relation `are within tol of each other in mass'.
+This density based clustering is a univariate optimisation of the DBSCAN*
+algorithm as in section 3 of Campello et al. (2013).
+}
+\details{
+Note that a \code{mnpts} of 1 will produce groups that correspond to the
+equivalence classes of the relation ``are within \code{eps} of each other''.
+This can be useful for low-density or low-noise data.
+
+This is included in this package due to its usefulness in clustering peaks
+by mass, see example below.
 }
 \examples{
-\dontrun{
-dataset.name = "A1" # Peaklist files should be in ./A1/peaklists/
-n.empty = combine_peaklists(dataset.name)
-df.peak = load_peaklist(dataset.name)
-df.tol  = dbscan(df.peak)
-}
+i.path = system.file("extdata", "test1", package = "dipps")
+n.emp  = combine_peaklists(i.path)
+o.name = basename(i.path)
+df.peak = load_peaklist(o.name)
+df.peak$group = dbscan(df.peak$m.z)
+
 }
 \seealso{
-This is a univariate optimisation of the DBSCAN* algorithm as in
-section 3 of:
+\code{\link{combine_peaklists}}
 
+Section 3 of
 Campello, Ricardo JGB, Davoud Moulavi, and Joerg Sander.
 "Density-based clustering based on hierarchical density estimates." In
 Advances in Knowledge Discovery and Data Mining, pp. 160-172. Springer Berlin

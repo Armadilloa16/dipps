@@ -13,18 +13,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#' Subsets a peaklist around known masses.
+
+
+#' Extract known masses from a peak-list.
 #'
-#' Subsets a peaklist around given masses with the given tolerance.
+#' Typically used on a peak-list as produced by \code{combine_peaklists} to
+#' extract peaks within a given tolerance of a set of known masses.
 #'
-#' @param df.peak Parameter
-#' @param mzs Parameter
-#' @param margin Parameter
-#' @param use_ppm Parameter
-#' @param var Parameter
+#' @param df.peak A data.frame with column named \code{var}.
+#' @param masses  A numeric vector of masses to extract.
+#' @param margin  A positive number: the tolerance around \code{masses} to
+#'   extract.
+#' @param use_ppm A logical value indicating if \code{margin} is given in ppm,
+#'   if not \code{margin} is assumed to be in the same units as \code{var}.
+#' @param var     A character string representing the variable/ column in
+#'   \code{df.peak} that contain the values to be subsetted.
+#'
+#' @seealso \code{\link{combine_peaklists}}
 #'
 #' @export
-extract_masses <- function(df.peak, mzs,
+extract_masses <- function(df.peak,
+                           masses,
                            margin = 0.3,
                            use_ppm = FALSE,
                            var = "m.z") {
@@ -32,134 +41,104 @@ extract_masses <- function(df.peak, mzs,
 
   df.sub.dne = FALSE
   if (use_ppm) margin.ppm = margin
-  for (i in 1:length(mzs)){
-    if (use_ppm) margin = margin.ppm*mzs[i]*1e-6
-    l = abs(df.peak[,var] - mzs[i]) <= margin
+  for (i in 1:length(masses)){
+    if (use_ppm) margin = margin.ppm*masses[i]*1e-6
+    l = abs(df.peak[,var] - masses[i]) <= margin
     if (all(!l)) next
     if (!df.sub.exists){
-      df.sub <- transform(df.peak[l,], group = mzs[i])
+      df.sub <- transform(df.peak[l,], group = masses[i])
       df.sub.exists = TRUE
     } else {
-      df.sub <- rbind(df.sub, transform(df.peak[l,], group = mzs[i]))
+      df.sub <- rbind(df.sub, transform(df.peak[l,], group = masses[i]))
     }
   }
   return(df.sub)
 }
 
 
-#' Tolerance Clustering
-#'
-#' Groups peaks together according to the equivalence classes induced by the
-#' relation `are within tol of each other in mass'.
-#'
-#' @param df.peak Parameter
-#' @param tol Parameter
-#' @param var Parameter
-#'
-#' @examples
-#' \dontrun{
-#' dataset.name = "A1" # Peaklist files should be in ./A1/peaklists/
-#' n.empty = combine_peaklists(dataset.name)
-#' df.peak = load_peaklist(dataset.name)
-#' df.tol  = tol_clus(df.peak)
-#' # Count how many peaks in each group
-#' counts = table(df.tol$group)
-#' # Remove peaks belonging to groups with less than 100 peaks total.
-#' df.sub = subset(df.tol, group %in% as.numeric(names(counts)[counts >= 100]))
-#' }
-#' @export
-tol_clus <- function(df.peak,
-                     tol = 0.1,
-                     var = "m.z") {
-  # TODO: Check inputs
-
-  df.peak = df.peak[order(df.peak[, var]),]
-  n = nrow(df.peak)
-  df.peak <- transform(df.peak, group = 1)
-  for (i in which(df.peak[2:n, var] - df.peak[1:(n-1), var] > tol)){
-    df.peak[(i+1):n, "group"] <- df.peak[(i+1):n, "group"] + 1
-  }
-  return(df.peak)
-}
-
 #' Density Based Clustering
 #'
-#' Groups peaks together according to the equivalence classes induced by the
-#' relation `are within tol of each other in mass'.
+#' This density based clustering is a univariate optimisation of the DBSCAN*
+#' algorithm as in section 3 of Campello et al. (2013).
 #'
-#' @param df.peak Parameter
-#' @param eps Parameter
-#' @param mnpts Parameter
-#' @param var Parameter
-#' @param pp Parameter
+#' Note that a \code{mnpts} of 1 will produce groups that correspond to the
+#' equivalence classes of the relation ``are within \code{eps} of each other''.
+#' This can be useful for low-density or low-noise data.
 #'
-#' @seealso This is a univariate optimisation of the DBSCAN* algorithm as in
-#' section 3 of:
+#' This is included in this package due to its usefulness in clustering peaks
+#' by mass, see example below.
 #'
+#' @param x     A numeric vector of values to be clustered
+#' @param eps   A positive number representing the window radius in which to
+#'   group points / measure density.
+#' @param mnpts A positive number representing the minimum density for a point
+#'   to be included -- the minimum number of points within +/- \code{eps}.
+#' @param pp    A logical value indicating whether progress should be printed to
+#'   the console.
+#'
+#' @seealso \code{\link{combine_peaklists}}
+#'
+#' Section 3 of
 #' Campello, Ricardo JGB, Davoud Moulavi, and Joerg Sander.
 #' "Density-based clustering based on hierarchical density estimates." In
 #' Advances in Knowledge Discovery and Data Mining, pp. 160-172. Springer Berlin
 #' Heidelberg, 2013.
 #'
 #' @examples
-#' \dontrun{
-#' dataset.name = "A1" # Peaklist files should be in ./A1/peaklists/
-#' n.empty = combine_peaklists(dataset.name)
-#' df.peak = load_peaklist(dataset.name)
-#' df.tol  = dbscan(df.peak)
-#' }
+#' i.path = system.file("extdata", "test1", package = "dipps")
+#' n.emp  = combine_peaklists(i.path)
+#' o.name = basename(i.path)
+#' df.peak = load_peaklist(o.name)
+#' df.peak$group = dbscan(df.peak$m.z)
+#'
 #' @export
-dbscan <- function(df.peak, eps = 0.05, mnpts = 100, var = "m.z", pp = FALSE){
-  if (!any(var == names(df.peak))){
-    stop("dipps::dbscan: Non-existent variable selected for clustering.")
-  }
-  if (mnpts > nrow(df.peak)){
-    warning("dipps::dbscan: No core points.")
-    df.peak$group = 0
-    return(df.peak)
-  }
-  # TODO: Add more checks on input
+dbscan <- function(x, eps = 0.05, mnpts = 100, pp = FALSE){
 
-  n <- nrow(df.peak)
+  # TODO: Add more checks on input
+  n = length(x)
+  if (mnpts > n){
+    warning("dipps::dbscan: No core points.")
+    return(rep(0, n))
+  }
+
   # sort
-  if(pp){
+  if (pp) {
     print("Sorting...")
   }
+  o = order(x)
+  x = x[o]
+  o = match(1:n, o)
 
-  # TODO: Fix this up with checks of inputs
-  if (is.data.frame(df.peak) & dim(df.peak)[2] > 1) {
-    df.peak <- df.peak[order(df.peak[, var]), ]
-    x <- df.peak[, var]
-  } else if (is.data.frame(df.peak) & dim(df.peak)[2] == 1) {
-    df.peak[var] <- df.peak[order(df.peak[var]), ]
-    x <- df.peak[, var]
-  }
-  d <- rep(1,n)
-  cur.per = 0
-  if(pp){
-    print("Counting Neighbours...")
-  }
-  for(i in 1:(mnpts-1)){
-    tmp = (x[(1+i):n] - x[1:(n-i)]) <= eps
-    d[(1+i):n] = d[(1+i):n] + tmp
-    d[1:(n-i)] = d[1:(n-i)] + tmp
-    if (pp & floor(20 * i / (mnpts + 1)) > cur.per) {
-      cur.per = floor(20 * i / (mnpts + 1))
-      print(paste(toString(5 * cur.per), "%", sep = ""))
+  if (mnpts > 1) {
+    d <- rep(1, n)
+    cur.per = 0
+    if (pp) {
+      print("Counting Neighbours...")
     }
+    for (i in 1:(mnpts-1)) {
+      tmp = (x[(1+i):n] - x[1:(n-i)]) <= eps
+      d[(1+i):n] = d[(1+i):n] + tmp
+      d[1:(n-i)] = d[1:(n-i)] + tmp
+      if (pp & floor(20 * i / (mnpts + 1)) > cur.per) {
+        cur.per = floor(20 * i / (mnpts + 1))
+        print(paste(toString(5 * cur.per), "%", sep = ""))
+      }
+    }
+    # Identify core points
+    p_core <- d >= mnpts
+    n_core <- sum(p_core)
+  } else if (mnpts == 1) {
+    p_core = rep(TRUE, n)
+    n_core = n
   }
-  # Identify core points
-  p_core <- d >= mnpts
-  n_core <- sum(p_core)
+
   if(n_core == 0){
     warning("dipps::dbscan: No core points.")
-    df.peak$group = 0
-    return(df.peak)
+    return(rep(0, n))
   }
   # Check there is more than one core point
   if(n_core == 1){
-    df.peak$group <- as.numeric(p_core)
-    return(df.peak)
+    return(as.numeric(p_core)[o])
   }
   # calc pairwise (adjacent) distances between core points (only)
   if (pp) {
@@ -169,9 +148,9 @@ dbscan <- function(df.peak, eps = 0.05, mnpts = 100, var = "m.z", pp = FALSE){
   dist <- x_core[2:n_core] - x_core[1:(n_core-1)]
   clus <- c(1, 1 + cumsum(dist > eps))
 
-  df.peak$group = 0
-  df.peak[p_core, "group"] = clus
-  return(df.peak)
+  g = 0
+  g[p_core] = clus
+  return(g[o])
 }
 
 

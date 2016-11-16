@@ -1,14 +1,21 @@
-
-test_that("dbscan of invalid input throws correct error", {
-  expect_error(dbscan(data.frame(mz = 1:10)),
-               "dipps::dbscan: Non-existent variable selected for clustering.")
-  expect_error(dbscan(data.frame(mz = 1:1000)),
-               "dipps::dbscan: Non-existent variable selected for clustering.")
-})
+# Copyright (C) 2016 Lyron Winderbaum
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 test_that("dbscan of sparse points produces correct warning", {
-  expect_warning(dbscan(data.frame(m.z = 1:10)),
+  expect_warning(dbscan(1:10),
                  "dipps::dbscan: No core points.")
-  expect_warning(dbscan(data.frame(m.z = 1:1000)),
+  expect_warning(dbscan(1:1000),
                  "dipps::dbscan: No core points.")
 })
