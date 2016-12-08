@@ -39,15 +39,15 @@ extract_masses <- function(df.peak,
                            var = "m.z") {
   # TODO: Check inputs
 
-  df.sub.dne = FALSE
+  df.sub.dne = TRUE
   if (use_ppm) margin.ppm = margin
   for (i in 1:length(masses)){
     if (use_ppm) margin = margin.ppm*masses[i]*1e-6
     l = abs(df.peak[,var] - masses[i]) <= margin
     if (all(!l)) next
-    if (!df.sub.exists){
+    if (df.sub.dne){
       df.sub <- transform(df.peak[l,], group = masses[i])
-      df.sub.exists = TRUE
+      df.sub.dne = FALSE
     } else {
       df.sub <- rbind(df.sub, transform(df.peak[l,], group = masses[i]))
     }
@@ -148,7 +148,7 @@ dbscan <- function(x, eps = 0.05, mnpts = 100, pp = FALSE){
   dist <- x_core[2:n_core] - x_core[1:(n_core-1)]
   clus <- c(1, 1 + cumsum(dist > eps))
 
-  g = 0
+  g = rep(0, length(x))
   g[p_core] = clus
   return(g[o])
 }
