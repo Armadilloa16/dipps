@@ -94,7 +94,32 @@ extract_masses <- function(df.peak,
 #' @export
 dbscan <- function(x, eps = 0.05, mnpts = 100, pp = FALSE){
 
-  # TODO: Add more checks on input
+  if (!is.vector(x, mode="numeric")){
+    stop(paste("dipps::dbscan: invalid input: x is not a numeric vector."))
+  }
+
+  if (!is.vector(eps, mode="numeric")){
+    stop(paste("dipps::dbscan: invalid input: eps is not a numeric vector."))
+  } else if (length(eps) != 1) {
+    stop(paste("dipps::dbscan: invalid input: multiple eps values provided."))
+  } else if (eps <= 0) {
+    stop(paste("dipps::dbscan: invalid input: non-positive eps provided."))
+  }
+  
+  if (!is.vector(mnpts, mode="numeric")){
+    stop(paste("dipps::dbscan: invalid input: mnpts is not a numeric vector."))
+  } else if (length(mnpts) != 1) {
+    stop(paste("dipps::dbscan: invalid input: multiple mnpts values provided."))
+  } else if (mnpts <= 0) {
+    stop(paste("dipps::dbscan: invalid input: non-positive mnpts provided."))
+  }
+  
+  if (!is.vector(pp, mode="logical")){
+    stop(paste("dipps::dbscan: invalid input: pp is not a logical vector."))
+  } else if (length(pp) != 1) {
+    stop(paste("dipps::dbscan: invalid input: multiple pp values provided."))
+  } 
+  
   n = length(x)
   if (mnpts > n){
     warning("dipps::dbscan: No core points.")

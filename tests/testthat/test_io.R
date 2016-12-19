@@ -28,11 +28,11 @@ test_that("combine_peaklists returns correct number of empty spectra.", {
                2)
 })
 
-# Cleanup
-unlink("*_peaklist.txt")
-unlink("*_speclist.txt")
-
 test_that("combine_peaklists of invalid input produces correct warning", {
   expect_warning(combine_peaklists("."),
                  "dipps::combine_peaklists: No peaklist files found, aborting.")
 })
+
+# Cleanup
+unlink("*_peaklist.txt")
+unlink("*_speclist.txt")
