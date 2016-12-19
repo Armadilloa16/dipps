@@ -25,35 +25,37 @@
 #' a mass range or peakgroup, possibly grouped via some clustering method such
 #' as that offered by \code{dbscan}.
 #'
-#' \code{obs}, \code{var}, and \code{subset} must be equal length, and can be
+#' \code{obs} and \code{var} must be numeric, so if you are storing these values
+#' as some other form of categorical variable this can easier be converted using
+#' \code{factor} and \code{as.numeric}.
+#' \code{obs}, \code{var}, and \code{sub} must be equal length, and can be
 #' taken from the output of \code{combine_peaklists} with relative ease -- see
 #' example below. It is also assumed that equal entries in \code{obs} should
-#' have equal entries in \code{subset} as well. TODO: I should add a check for
-#' that.
+#' have equal entries in \code{sub} as well.
 #'
 #' Note that from the perspective of treating occurrence in each variable
 #' (seperately) being used as a binary classifier for membership in the subset,
 #' the DIPPS can be thought of as the Informedness of these classifiers, i.e.
 #' the DIPPS = sensitivity + specificity - 1.
 #'
-#' @param obs   A vector identifying the observation from which an occurrence
-#'   originated.
-#' @param var  A vector identifying the variable of which an occurrence is a
-#'   realisation.
-#' @param subset A vector identifying occurrences belonging to the subset of
-#'   observations of interest.
+#' @param obs    A numeric vector identifying the observation from which an
+#'   occurrence originated.
+#' @param var    A numeric vector identifying the variable of which an
+#'   occurrence is a realisation.
+#' @param sub A logical vector identifying occurrences belonging to the
+#'   subset of observations of interest.
 #'
 #' @return Successful completion will return a data.frame in which rows
 #' represent variables (as identified by \code{var}), ordered in decreasing
 #' order of DIPPS, and with seven columns:
 #' \itemize{
 #'   \item \code{var}.
-#'   \item p.u: proportions of occurrence in the \code{subset == TRUE} subset of
+#'   \item p.u: proportions of occurrence in the \code{sub == TRUE} subset of
 #'     observations.
-#'   \item p.d: proportions of occurrence in the \code{subset == FALSE} subset
+#'   \item p.d: proportions of occurrence in the \code{sub == FALSE} subset
 #'     of observations.
 #'   \item d:   p.u - p.d (DIPPS).
-#'   \item c.u: the cosine distance centroid of the \code{subset == TRUE} subset
+#'   \item c.u: the cosine distance centroid of the \code{sub == TRUE} subset
 #'     of observations.
 #'   \item cos: the cosine distance between c.u and the `template' vector t
 #'     which contains ones in each peakgroup with a DIPPS equal to or greater
@@ -82,33 +84,55 @@
 #'
 #' # Select a subset of spectra expected to be overexpressed. In this case
 #' # spectra with Y-coordinate greater than or equal to 170.
-#' df.spec$subset = df.spec$Y >= 170
-#' df.peak = merge(df.peak, df.spec[, c("Acq", "subset")])
+#' df.spec$sub = df.spec$Y >= 170
+#' df.peak = merge(df.peak, df.spec[, c("Acq", "sub")])
 #'
 #' # Calculate DIPPS
-#' df.dipps = dipps(df.peak$Acq, df.peak$group, df.peak$subset)
+#' df.dipps = dipps(df.peak$Acq, df.peak$group, df.peak$sub)
 #'
 #' @export
-dipps <- function(obs, var, subset) {
-  # Add checks on input
+dipps <- function(obs, var, sub) {
 
+  if (!is.vector(obs, mode="numeric")){
+    stop("dipps::dipps: invalid input: obs is not a numeric vector.")
+  }
+  if (!is.vector(var, mode="numeric")){
+    stop("dipps::dipps: invalid input: var is not a numeric vector.")
+  }
+  if (!is.vector(sub, mode="logical")){
+    stop("dipps::dipps: invalid input: sub is not a logical vector.")
+  }
+
+  if ((length(obs) != length(var)) | (length(obs) != length(sub))) {
+    stop("dipps::dipps: invalid inputs: inputs are unequal lengths.")
+  }
+
+  tmp = unique(data.frame(obs = obs, sub = sub))
+  if (length(unique(tmp$obs)) != nrow(tmp)) {
+    stop("dipps::dipps: invalid inputs: obs inconsistent with sub.")
+  }
+  
+  if (nrow(unique(data.frame(obs = obs, var = var))) != length(obs)) {
+    stop("dipps::dipps: invalid inputs: occurences not represented uniquely.")
+  }
+  
   df.peak = data.frame(obs = obs,
                        var = var,
-                       subset = subset)
+                       sub = sub)
 
   # Calculate Proportions of Occurence
-  nSpec_d = length(unique(obs[!subset]))
-  nSpec_u = length(unique(obs[subset]))
+  nSpec_d = length(unique(obs[!sub]))
+  nSpec_u = length(unique(obs[sub]))
   prop = plyr::ddply(df.peak,
-                     c("var", "subset"),
+                     c("var", "sub"),
                      plyr::summarise,
                      p = length(obs))
-  prop[!prop$subset, "p"] = prop[!prop$subset, "p"]/nSpec_d
-  prop[prop$subset,  "p"] = prop[prop$subset,  "p"]/nSpec_u
+  prop[!prop$sub, "p"] = prop[!prop$sub, "p"]/nSpec_d
+  prop[prop$sub,  "p"] = prop[prop$sub,  "p"]/nSpec_u
 
   # Reshape into vector form
   prop <- stats::reshape(prop,
-                         timevar = "subset",
+                         timevar = "sub",
                          idvar = "var",
                          direction="wide")
   prop = replace(prop, is.na(prop), 0)
@@ -119,9 +143,9 @@ dipps <- function(obs, var, subset) {
   prop$d = prop$p.u - prop$p.d
 
   # Calculate subset centroid
-  u.m = reshape2::dcast(subset(df.peak, subset),
+  u.m = reshape2::dcast(subset(df.peak, sub),
                         obs ~ var,
-                        value.var = "subset")
+                        value.var = "sub")
   acq = u.m[,1]
   u.m = as.matrix(u.m[,-1])
   u.m[!is.na(u.m)] = 1
